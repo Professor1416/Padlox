@@ -1,85 +1,35 @@
-// background/service-worker.js
-// The service worker has two jobs:
-//
-// 1. Grant content scripts access to chrome.storage.session. By default,
-//    Chrome restricts storage.session to "trusted" extension contexts
-//    (popup, settings page, service worker) and blocks content scripts
-//    from reading or writing it. Since content/lock.js runs as a content
-//    script on the protected site itself and relies on storage.session to
-//    record "this domain is unlocked", that default would make every
-//    unlock attempt fail with a permission error — even with the correct
-//    password. This access level is NOT remembered across browser
-//    restarts, so it must be (re)granted on every startup, not just once.
-//
-// 2. Make sure dynamically-registered content scripts for protected sites
-//    survive browser restarts and extension reloads.
-//
-// All other user-facing actions (protecting a site, locking, removing
-// protection, changing the password) happen directly in the popup/settings
-// pages, which already have the same extension privileges.
-
-import { getSites } from '../shared/storage.js';
-import { buildOriginPatterns } from '../shared/utils.js';
-
-async function enableSessionStorageForContentScripts() {
-  try {
-    await chrome.storage.session.setAccessLevel({
-      accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS'
-    });
-  } catch (err) {
-    console.warn('Padlox: could not set session storage access level', err);
+import {createAuthorization} from './authorization.js';
+import {buildOriginPatterns} from '../shared/utils.js';
+const authorize=createAuthorization(chrome);
+const ready=Promise.all([
+ chrome.storage.local.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'}),
+ chrome.storage.session.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'})
+]);
+// Every worker activation restores the boundary before accepting requests.
+chrome.runtime.onMessage.addListener((message,sender,respond)=>{
+ ready.then(()=>authorize(message,sender)).then(result=>{
+  respond(result);
+  if(result.ok&&['UNLOCK','LOCK','PROTECT','REMOVE_SITE','RESET','CHANGE_PASSWORD'].includes(message.action)){
+   notifyTabs().catch(()=>console.warn('Padlox: a tab could not be notified.'));
   }
-}
-
-async function reregisterAllSiteScripts() {
-  const sites = await getSites();
-  const domains = Object.keys(sites);
-  if (domains.length === 0) return;
-
-  let existingIds = new Set();
-  try {
-    const existing = await chrome.scripting.getRegisteredContentScripts();
-    existingIds = new Set(existing.map((s) => s.id));
-  } catch {
-    // ignore — fall through and try to register everything
-  }
-
-  const toRegister = [];
-  for (const domain of domains) {
-    const id = 'padlox-' + domain;
-    if (!existingIds.has(id)) {
-      toRegister.push({
-        id,
-        matches: buildOriginPatterns(domain),
-        js: ['content/lock.js'],
-        runAt: 'document_start',
-        world: 'ISOLATED',
-        persistAcrossSessions: true
-      });
-    }
-  }
-
-  if (toRegister.length > 0) {
-    try {
-      await chrome.scripting.registerContentScripts(toRegister);
-    } catch (err) {
-      console.warn('Padlox: could not re-register content scripts', err);
-    }
-  }
-}
-
-chrome.runtime.onInstalled.addListener(() => {
-  enableSessionStorageForContentScripts();
-  reregisterAllSiteScripts();
+ },()=>respond({ok:false,error:'Padlox could not initialize securely. Reload the extension.'}));
+ return true;
 });
-
-chrome.runtime.onStartup.addListener(() => {
-  enableSessionStorageForContentScripts();
-  reregisterAllSiteScripts();
-});
-
-// Belt-and-suspenders: also set it immediately when the service worker
-// itself first spins up (covers the "extension was already installed but
-// the access level didn't stick" edge case without waiting for a browser
-// restart).
-enableSessionStorageForContentScripts();
+async function notifyTabs(){
+ const tabs=await chrome.tabs.query({});
+ await Promise.all(tabs.map(tab=>chrome.tabs.sendMessage(tab.id,{action:'REFRESH_STATUS'}).catch(()=>{})));
+}
+chrome.tabs.onRemoved.addListener(id=>{ready.then(()=>authorize.clearTab(id)).catch(()=>{});});
+async function restoreScripts(){
+ await ready;
+ const {padlox_sites:sites={}}=await chrome.storage.local.get('padlox_sites');
+ const existing=new Set((await chrome.scripting.getRegisteredContentScripts()).map(s=>s.id));
+ for(const domain of Object.keys(sites)){
+  const id='padlox-'+domain;
+  if(existing.has(id))continue;
+  try{if(await chrome.permissions.contains({origins:buildOriginPatterns(domain)}))await chrome.scripting.registerContentScripts([{id,matches:buildOriginPatterns(domain),js:['content/lock.js'],runAt:'document_start',world:'ISOLATED',persistAcrossSessions:true}]);}catch{console.warn('Padlox: a protected site could not be registered.');}
+ }
+}
+chrome.runtime.onInstalled.addListener(()=>{ready.then(()=>chrome.storage.session.remove(['padlox_unlocked','padlox_attempts','padlox_tab_unlocks','padlox_settings_grants'])).then(restoreScripts).catch(()=>console.warn('Padlox: startup failed.'));});
+chrome.runtime.onStartup.addListener(()=>restoreScripts().catch(()=>console.warn('Padlox: startup failed.')));
+ready.catch(()=>console.warn('Padlox: trusted storage initialization failed.'));

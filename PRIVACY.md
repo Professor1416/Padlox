@@ -10,13 +10,22 @@ All Padlox data is stored locally in your browser, using Chrome's
 
 - **Your Padlox password** is never stored in plain text. Padlox derives a
   salted PBKDF2 (SHA-256) hash from it and stores only the random salt and
-  the resulting hash — not the password itself. There is no way to reverse
-  the hash back into your password.
+  the resulting hash — not the password itself. The hash is not plaintext, but weak PINs/passwords can be guessed offline
+  by someone who obtains the verifier.
 - **Your protected website list** (e.g. `instagram.com`) is stored locally
   so Padlox knows which sites to lock.
-- **Which sites are currently unlocked** is stored in session storage, which
-  Chrome automatically clears when the browser closes. This is why
-  protected sites ask for your password again after a restart.
+- **Per-tab unlock state** stores a tab ID, document ID, and protected domain
+  in session storage. New tabs and reloads require another unlock.
+- **Settings authorization** stores a page-bound authorization expiry in
+  session storage and expires after five minutes.
+- **Failed-password attempts** and cooldown timestamps live in session storage
+  and are shared across password actions. These session records clear on browser
+  restart; restarting can therefore reset the cooldown.
+
+Only trusted extension contexts can access this storage. The service worker
+owns authorization. Websites do not receive the verifier or your password
+through Padlox's status messages. Password entry is in the extension popup or
+Settings, not the website overlay.
 
 ## What Padlox never does
 
@@ -42,6 +51,7 @@ install time.
 ## Questions
 
 Padlox is a local-only tool with no company or server behind the data it
-handles. If you uninstall Padlox or use Chrome's "Clear browsing data" for
-extension storage, all Padlox data (your password hash, protected site
-list, and unlock state) is permanently deleted from your device.
+handles. The authenticated **Reset Padlox** action removes Padlox's verifier,
+protected-site list, and session authorizations. Uninstalling the extension
+removes its extension storage. Padlox cannot guarantee secure erasure of browser
+backups or filesystem copies. Your website accounts are unaffected.

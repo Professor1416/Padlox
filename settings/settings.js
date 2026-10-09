@@ -1,20 +1,39 @@
-import {
-  getConfig, setConfig, getSites, setSites, clearUnlocked, clearAll
-} from '../shared/storage.js';
-import { createVerifier, verifyPassword } from '../shared/crypto.js';
-import { buildOriginPatterns, displayName } from '../shared/utils.js';
+import { request } from '../shared/client.js';
+import { displayName } from '../shared/utils.js';
 
+let expiryTimer = null;
 const el = (id) => document.getElementById(id);
 
 let pendingConfirmAction = null; // async (password) => { ok: boolean, error?: string }
 
 async function init() {
-  await renderSitesList();
   wireEvents();
+  chrome.runtime.onMessage.addListener((message, sender) => {
+    const dashboard = el('settings-dashboard');
+    if (sender.id === chrome.runtime.id && !sender.tab && message?.action === 'REFRESH_STATUS' && dashboard && !dashboard.hidden) {
+      renderSitesList(el('sites-search').value).catch(() => lockSettings());
+    }
+  });
+  el('settings-auth-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = el('settings-auth-submit');
+    button.disabled = true;
+    el('settings-auth-error').textContent = '';
+    try {
+      const authorization = await request('AUTH_SETTINGS', { password: el('settings-auth-password').value });
+      clearTimeout(expiryTimer);
+      expiryTimer = setTimeout(lockSettings, authorization.expiresInMs);
+      await renderSitesList();
+      el('settings-gate').hidden = true;
+      el('settings-dashboard').hidden = false;
+    } catch (error) { el('settings-auth-error').textContent = error.message; }
+    finally { el('settings-auth-password').value = ''; button.disabled = false; }
+  });
 }
 
 async function renderSitesList(filterText = '') {
-  const sites = await getSites();
+  const { sites } = await settingsRequest('LIST_SITES');
+
   const listEl = el('sites-list');
   const emptyEl = el('sites-empty');
   const noMatchEl = el('sites-no-match');
@@ -73,7 +92,7 @@ function wireEvents() {
     if (e.target === el('modal-backdrop')) closeModal();
   });
   el('sites-search').addEventListener('input', (e) => {
-    renderSitesList(e.target.value);
+    renderSitesList(e.target.value).catch(error => { lockSettings(); el('settings-auth-error').textContent = error.message; });
   });
 }
 
@@ -88,7 +107,8 @@ function openModal(title, message, onConfirm) {
 }
 
 function closeModal() {
-  el('modal-backdrop').hidden = true;
+  if (el('modal-backdrop')) el('modal-backdrop').hidden = true;
+  if (el('modal-password')) el('modal-password').value = '';
   pendingConfirmAction = null;
 }
 
@@ -116,98 +136,44 @@ async function onModalConfirm() {
     // Previously an unexpected error here had nowhere to go: the modal
     // just sat there looking "stuck" with no feedback. Now it always
     // surfaces something instead of failing silently.
-    console.error('Padlox: confirm action failed', err);
-    errorEl.textContent = 'Something went wrong. Please try again.';
+    errorEl.textContent = err.message || 'Something went wrong. Please try again.';
   } finally {
+    el('modal-password') && (el('modal-password').value = '');
     confirmBtn.disabled = false;
   }
 }
 
-function confirmRemoveSite(domain) {
-  openModal(
-    'Remove protection?',
-    `Remove protection from ${domain}? You'll need your Padlox password to confirm.`,
-    async (password) => {
-      let config;
-      try {
-        config = await getConfig();
-      } catch (err) {
-        return { ok: false, error: 'Could not read Padlox config. Please try again.' };
-      }
-
-      const valid = await verifyPassword(password, config);
-      if (!valid) return { ok: false, error: 'Incorrect password.' };
-
-      const id = 'padlox-' + domain;
-      try {
-        await chrome.scripting.unregisterContentScripts({ ids: [id] });
-      } catch {
-        // ignore if it was already unregistered
-      }
-      try {
-        await chrome.permissions.remove({ origins: buildOriginPatterns(domain) });
-      } catch {
-        // ignore if permission removal isn't possible
-      }
-
-      try {
-        const sites = await getSites();
-        delete sites[domain];
-        await setSites(sites);
-        await renderSitesList(el('sites-search').value);
-      } catch (err) {
-        return { ok: false, error: 'Removed access, but could not update the site list. Please refresh.' };
-      }
-
-      return { ok: true };
-    }
-  );
+function lockSettings() {
+  clearTimeout(expiryTimer);
+  closeModal();
+  if (!el('sites-list')) return;
+  el('sites-list').replaceChildren();
+  for (const input of document.querySelectorAll('input[type="password"]')) input.value = '';
+  el('settings-dashboard').hidden = true;
+  el('settings-gate').hidden = false;
 }
-
+async function settingsRequest(action, payload = {}) {
+  try { return await request(action, payload); }
+  catch (error) {
+    if (error.message === 'Authenticate Settings again.') lockSettings();
+    throw error;
+  }
+}
+function confirmRemoveSite(domain) {
+  openModal('Remove protection?', `Remove protection from ${domain}? Enter your Padlox password.`, async (password) => {
+    await settingsRequest('REMOVE_SITE', { domain, password });
+    await renderSitesList(el('sites-search').value);
+    return { ok: true };
+  });
+}
 function confirmReset() {
-  openModal(
-    'Reset Padlox',
-    'Resetting Padlox removes your Padlox password and protected website list. It does not change your Instagram, Facebook, Google, or other website passwords.',
-    async (password) => {
-      let config;
-      try {
-        config = await getConfig();
-      } catch (err) {
-        return { ok: false, error: 'Could not read Padlox config. Please try again.' };
-      }
-
-      const valid = await verifyPassword(password, config);
-      if (!valid) return { ok: false, error: 'Incorrect password.' };
-
-      try {
-        const sites = await getSites();
-        const domains = Object.keys(sites);
-
-        for (const domain of domains) {
-          const id = 'padlox-' + domain;
-          try {
-            await chrome.scripting.unregisterContentScripts({ ids: [id] });
-          } catch {
-            // ignore
-          }
-          try {
-            await chrome.permissions.remove({ origins: buildOriginPatterns(domain) });
-          } catch {
-            // ignore
-          }
-        }
-
-        await clearAll();
-      } catch (err) {
-        return { ok: false, error: 'Something went wrong during reset. Please try again.' };
-      }
-
-      document.body.innerHTML =
-        '<div class="page"><div class="card"><h2>Padlox has been reset</h2>' +
-        '<p class="danger-text">Open the Padlox icon in your toolbar to set up a new password.</p></div></div>';
-      return { ok: true };
-    }
-  );
+  openModal('Reset Padlox', 'Remove your Padlox password and protected website list? This does not change your website accounts.', async (password) => {
+    await settingsRequest('RESET', { password });
+    closeModal();
+    clearTimeout(expiryTimer);
+    document.body.innerHTML = '<div class="page"><div class="card"><h2>Padlox has been reset</h2><p>Open the Padlox toolbar icon to create a new password.</p></div></div>';
+    return { ok: true };
+  });
 }
 
 async function onChangePassword(e) {
@@ -229,25 +195,18 @@ async function onChangePassword(e) {
     return;
   }
 
-  const config = await getConfig();
-  const valid = await verifyPassword(current, config);
-  if (!valid) {
-    errorEl.textContent = 'Current password is incorrect.';
-    return;
-  }
-
   const submitBtn = e.target.querySelector('button[type="submit"]');
   submitBtn.disabled = true;
   try {
-    const newConfig = await createVerifier(next);
-    await setConfig(newConfig);
-    await clearUnlocked(); // invalidate any currently-unlocked sessions
+    await settingsRequest('CHANGE_PASSWORD', { password: current, next });
+    lockSettings();
+    el('settings-auth-error').textContent = 'Password updated. Sign in again.';
     el('current-password').value = '';
     el('new-password').value = '';
     el('confirm-password').value = '';
     successEl.textContent = 'Password updated.';
   } catch (err) {
-    errorEl.textContent = 'Something went wrong. Please try again.';
+    errorEl.textContent = err.message || 'Something went wrong. Please try again.';
   } finally {
     submitBtn.disabled = false;
   }

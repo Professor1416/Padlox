@@ -1,7 +1,7 @@
 # Padlox
 
 Padlox adds an extra privacy lock to websites you stay signed into (Instagram,
-Facebook, or anywhere else). If someone opens a protected site on your
+Facebook, or other supported HTTP(S) sites). If someone opens a protected site on your
 computer, they'll hit a Padlox screen first and need your Padlox PIN or
 password before the page becomes usable.
 
@@ -18,6 +18,26 @@ It serves Settings locally with mocked Chrome APIs, so it does not need to
 load an unpacked extension. Run `npm run test:unit` for the browser-independent
 password and domain tests only. Test dependencies are not needed to install
 the extension.
+
+## Security architecture
+
+Requires Chrome 106 or newer. Password entry and verification happen in trusted
+extension contexts: enter your password in the Padlox popup or Settings, never
+in the website overlay. The service worker controls configuration, Settings
+authorization, and unlocks. Content scripts can request only their own lock
+status; sensitive local and session storage is restricted to trusted contexts.
+
+Settings authentication lasts five minutes and is bound to that Settings
+page. Removal, reset, and password changes also require your password again.
+Unlocks apply to one tab and one document. Other tabs and reloads remain locked.
+Existing password verifier records and protected-site lists are retained;
+legacy domain-wide unlock state is discarded. Reload protected tabs after
+updating the extension so they use the new password-free overlay.
+
+The automated browser tests use the real UI and authorization controller with
+mocked Chrome APIs. Native extension permissions, lifecycle, update, Incognito,
+and worker suspension still require testing in a browser that permits loading
+unpacked extensions. Passing these fixtures is not a store-release approval.
 
 ## Installing locally
 
@@ -49,9 +69,9 @@ any other website password — Padlox never asks for those.
 4. Chrome will ask you to approve access to that specific website — this is
    what lets Padlox show the lock screen there. Approve it.
 
-The site is now protected. The tab you're currently on stays usable; the
-lock screen appears the next time that site is opened or reloaded, or as
-soon as you click **Lock now**.
+The site is now protected and the current tab locks immediately. Open the
+Padlox toolbar popup and enter your password to unlock this tab. Other tabs
+and reloads require the password again.
 
 The popup shows a simple count of how many sites are protected — full
 management (search, remove protection) lives in **Settings**, so things
@@ -59,8 +79,9 @@ stay usable whether you've protected 2 sites or 200.
 
 ### 3. Unlock a protected site
 
-When you (or anyone else) opens a protected site, Padlox covers the page
-and asks for your Padlox PIN/password. Enter it and click **Unlock**.
+When a protected site opens, Padlox covers the page. Click the Padlox toolbar
+icon, enter your Padlox password in the popup, and click **Unlock this tab**.
+The website overlay never asks you to type your password.
 
 ### 4. Lock a site again
 
@@ -75,7 +96,8 @@ password to confirm.
 ## Settings
 
 From the popup, click the gear icon (or **Manage protected sites**) to open
-**Padlox Settings**, where you can:
+**Padlox Settings**. Enter your Padlox password before viewing the dashboard,
+where you can:
 
 - Search and remove protection from any site (works well even with a large list)
 - Change your Padlox password
@@ -114,6 +136,12 @@ It **cannot** stop someone who has direct access to your computer from:
 - Using a different browser entirely
 - Accessing the site through Chrome's incognito mode unless Padlox is
   enabled there
+
+The overlay does not stop website scripts, downloads, media, network requests,
+or inspection of underlying DOM content. A malicious or compromised website
+can hide, remove, or imitate a DOM overlay. Padlox therefore does not promise
+protection from hostile websites or someone using developer tools. Never type
+your Padlox password into a website; use the extension popup or Settings.
 
 For real protection when you step away, lock your computer (Windows key + L,
 `Cmd+Ctrl+Q` on macOS, etc.) — Padlox is a helpful extra layer on top of

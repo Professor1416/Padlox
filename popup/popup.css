@@ -162,3 +162,5 @@ input[type="password"]:focus { border-color: #5b8cff; }
   margin-bottom: 10px;
 }
 .sites-summary .count { font-weight: 600; color: #f2f2f3; }
+
+[hidden] { display: none !important; }

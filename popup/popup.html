@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
+  <div id="startup-error" class="error-text" role="alert"></div>
 
   <!-- First-time setup -->
   <section id="setup-screen" hidden>
@@ -43,6 +44,12 @@
       <div class="current-site-status" id="current-site-status"></div>
 
       <button id="protect-btn" class="btn-primary" hidden>Lock this site</button>
+      <form id="unlock-form" class="setup-form" hidden>
+        <label class="field-label" for="unlock-password">Padlox password</label>
+        <input id="unlock-password" type="password" autocomplete="current-password" required />
+        <div id="unlock-error" class="error-text" role="alert"></div>
+        <button id="unlock-submit" type="submit" class="btn-primary">Unlock this tab</button>
+      </form>
       <button id="lock-now-btn" class="btn-secondary" hidden>Lock now</button>
       <div class="error-text" id="protect-error"></div>
     </div>
