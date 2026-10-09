@@ -9,6 +9,16 @@ Padlox is a **browser-level privacy layer**. It is not a replacement for
 locking your computer, and it can't stop someone who has full access to your
 device (see **Security limitations** below).
 
+## Development tests
+
+Use Node.js 22 or newer. Install test dependencies with `npm ci`, then run
+`npm test`. The browser regression test uses Chromium at `/usr/bin/chromium`;
+set `CHROMIUM_PATH` to your Chrome or Chromium executable on other systems.
+It serves Settings locally with mocked Chrome APIs, so it does not need to
+load an unpacked extension. Run `npm run test:unit` for the browser-independent
+password and domain tests only. Test dependencies are not needed to install
+the extension.
+
 ## Installing locally
 
 1. Download and unzip `Padlox-v1.zip`.

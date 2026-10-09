@@ -190,6 +190,9 @@ input[type="password"]:focus { border-color: #5b8cff; }
   justify-content: center;
   z-index: 999;
 }
+.modal-backdrop[hidden] {
+  display: none;
+}
 .modal {
   width: 320px;
   max-width: 90vw;
