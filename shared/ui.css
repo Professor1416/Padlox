@@ -31,3 +31,5 @@ label, .field-label { font-size: 12px; font-weight: 600; color: var(--muted); }
 .password-field { position: relative; }
 .password-field input { padding-right: 64px; }
 .password-toggle { position: absolute; right: 4px; top: 4px; min-height: 34px; padding: 4px 8px; border: 0; background: transparent; color: var(--muted); font-size: 11px; }
+
+a { color: var(--focus); text-underline-offset: 3px; }

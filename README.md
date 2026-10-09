@@ -2,8 +2,8 @@
 
 Padlox adds an extra privacy lock to websites you stay signed into (Instagram,
 Facebook, or other supported HTTP(S) sites). If someone opens a protected site on your
-computer, they'll hit a Padlox screen first and need your Padlox PIN or
-password before the page becomes usable.
+computer, Padlox attempts to cover the page with a privacy screen. Your Padlox
+PIN or password unlocks that tab. See the security limitations below.
 
 Padlox is a **browser-level privacy layer**. It is not a replacement for
 locking your computer, and it can't stop someone who has full access to your
@@ -11,7 +11,8 @@ device (see **Security limitations** below).
 
 ## Development tests
 
-Use Node.js 22 or newer. Install test dependencies with `npm ci`, then run
+Use Node.js 22+ and Python 3.9+ (for release-package tests). Install test
+dependencies with `npm ci`, then run
 `npm test`. The browser regression test uses Chromium at `/usr/bin/chromium`;
 set `CHROMIUM_PATH` to your Chrome or Chromium executable on other systems.
 It serves Settings locally with mocked Chrome APIs, so it does not need to
@@ -82,11 +83,12 @@ permission prompt carefully, especially before protecting registry domains.
 
 ## Installing locally
 
-1. Download and unzip `Padlox-v1.zip`.
+1. Download this repository as a ZIP from GitHub and extract it, or build
+   `dist/padlox-1.0.1.zip` using the release-package command below.
 2. Open Chrome and go to `chrome://extensions`.
 3. Turn on **Developer mode** (top-right toggle).
 4. Click **Load unpacked**.
-5. Select the extracted `padlox` folder (the one that directly contains
+5. Select the extracted folder (the one that directly contains
    `manifest.json`).
 6. The Padlox icon will appear in your toolbar. Pin it for quick access.
 
@@ -107,11 +109,11 @@ any other website password — Padlox never asks for those.
 1. Visit the site you want to protect (e.g. `instagram.com`).
 2. Click the Padlox icon.
 3. Click **Lock this site**.
-4. Chrome will ask you to approve access to that specific website — this is
+4. Chrome will ask you to approve access to that domain and its subdomains — this is
    what lets Padlox show the lock screen there. Approve it.
 
-The site is now protected and the current tab locks immediately. Open the
-Padlox toolbar popup and enter your password to unlock this tab. Other tabs
+Padlox registers the lock screen for future pages and injects it into the
+current tab. Open the Padlox toolbar popup and enter your password to unlock this tab. Other tabs
 and reloads require the password again.
 
 The popup shows a simple count of how many sites are protected — full
@@ -157,15 +159,15 @@ unless you've explicitly allowed it: go to `chrome://extensions`, click
 Padlox asks for as little as possible up front:
 
 - **storage** — to save your Padlox password (as a salted hash, never in
-  plain text), your protected site list, and which sites are currently
-  unlocked for this browsing session.
+  plain text), your protected site list, shared failed-attempt cooldowns, and
+  tab/document unlock state for this browsing session.
 - **scripting** — to show the lock screen on protected sites.
 - **activeTab** — to see which site you're currently on when you open the
   popup.
 
 Padlox does **not** request access to every website up front. When you
-protect a site, Chrome asks you to approve access to that specific site
-only, at that moment.
+protect a site, Chrome asks you to approve access to that domain and its subdomains
+at that moment. IPv4 and single-label hosts use exact host patterns.
 
 ## Security limitations
 
@@ -178,6 +180,10 @@ It **cannot** stop someone who has direct access to your computer from:
 - Accessing the site through Chrome's incognito mode unless Padlox is
   enabled there
 
+Content can appear before the overlay is injected; Padlox does not guarantee a
+block before first paint. Existing tabs should be refreshed after extension
+updates to receive the latest lock screen.
+
 The overlay does not stop website scripts, downloads, media, network requests,
 or inspection of underlying DOM content. A malicious or compromised website
 can hide, remove, or imitate a DOM overlay. Padlox therefore does not promise
@@ -189,3 +195,31 @@ For real protection when you step away, lock your computer (Windows key + L,
 that, not a substitute for it.
 
 See `PRIVACY.md` for details on what Padlox stores and what it never does.
+
+## Release preparation
+
+See [the P2 audit](docs/P2-AUDIT.md) for verified behavior and outstanding
+checks, and [the store checklist](docs/CHROME-WEB-STORE.md) for listing drafts,
+permission justifications, privacy disclosures, and manual release gates.
+These documents do not certify store approval or legal compliance.
+
+With Node.js 22+ and Python 3.9+ available, run:
+
+```sh
+npm ci
+npm test
+npm audit
+npm run package:release
+```
+
+The package command produces `dist/padlox-1.0.1.zip` and a SHA-256 checksum.
+It does not run tests, publish, or upload. It includes only allowlisted runtime
+files and the privacy policy, with `manifest.json` at the ZIP root; it excludes
+Git files, tests, development dependencies, scripts, and screenshots. It fails
+if versions disagree or the embedded lock styles are stale. Identical source
+bytes produce an identical ZIP. `dist/` is ignored by Git.
+
+Version 1.0.1 is the current development candidate, not confirmation of a new
+store release. Before submission, choose a version greater than any already
+published version and update `manifest.json`, `package.json`, `package-lock.json`
+and the Settings version text together, then rerun validation and packaging.

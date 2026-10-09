@@ -45,3 +45,20 @@ test('persistent cooldown grows exponentially and caps at fifteen minutes',async
 });
 test('permission change during verification cannot authorize an unlock',async()=>{const f=await fixture();let calls=0;f.chrome.scripting.executeScript=async()=>{if(++calls===2)f.chrome.permissions.contains=async()=>false;return [{documentId:'doc-a'}]};assert.equal((await f.handle({action:'UNLOCK',documentId:'doc-a',tabId:1,password},f.popup)).ok,false);assert.equal(f.session.padlox_tab_unlocks,undefined)});
 test('corrupt attempt counters and protected-site storage fail closed',async()=>{const f=await fixture();f.local.padlox_auth_attempts=0;assert.equal((await f.handle({action:'AUTH_SETTINGS',password},f.settings)).ok,false);delete f.local.padlox_auth_attempts;f.local.padlox_sites=null;assert.equal((await f.handle({action:'STATUS'},f.content)).ok,false)});
+
+test('authenticated reset clears retained Padlox data and requests removal of tracked site capabilities',async()=>{
+ const f=await fixture(); const removedPermissions=[],removedScripts=[];
+ f.chrome.permissions.remove=async details=>{removedPermissions.push(details.origins);return true};
+ f.chrome.scripting.unregisterContentScripts=async details=>{removedScripts.push(...details.ids)};
+ assert((await f.handle({action:'UNLOCK',documentId:'doc-a',tabId:1,password},f.popup)).ok);
+ assert((await f.handle({action:'AUTH_SETTINGS',password},f.settings)).ok);
+ assert.equal((await f.handle({action:'AUTH_SETTINGS',password:'wrong'},f.settings)).ok,false);
+ assert(f.local.padlox_auth_attempts);
+ f.session.padlox_unlocked={'example.com':true};f.session.padlox_attempts={count:1};
+ f.tick();
+ assert((await f.handle({action:'RESET',password},f.settings)).ok);
+ assert.deepEqual(f.local,{});assert.deepEqual(f.session,{});
+ assert.deepEqual(removedScripts,['padlox-example.com']);
+ assert.deepEqual(removedPermissions,[['*://example.com/*','*://*.example.com/*']]);
+ assert.equal((await f.handle({action:'LIST_SITES'},f.settings)).ok,false);
+});

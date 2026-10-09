@@ -8,7 +8,7 @@ const path=require('node:path');
 test('trusted popup/Settings and password-free overlay integrate with authorization controller',async t=>{
  const {createAuthorization}=await import('../background/authorization.js');
  const {createVerifier}=await import('../shared/crypto.js');
- const root=path.resolve(__dirname,'..');
+ const root=process.env.PADLOX_TEST_ROOT ? path.resolve(process.env.PADLOX_TEST_ROOT) : path.resolve(__dirname,'..');
  const server=http.createServer((req,res)=>{
   if(req.url==='/site'){res.end('<html><body><button id="private">Private content</button></body></html>');return;}
   const file=path.join(root,new URL(req.url,'http://localhost').pathname);
