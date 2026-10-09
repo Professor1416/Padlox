@@ -1,0 +1,24 @@
+:root, :host {
+  --background: #0e0f12;
+  --surface: #17181c;
+  --surface-raised: #1c1d22;
+  --accent: #4a6cf7;
+  --action: #3d5be0;
+  --action-hover: #344ec4;
+  --text: #f2f2f3;
+  --muted: #b3b6c1;
+  --subtle: #9a9ba3;
+  --error: #ff6b6b;
+  --success: #93d9b0;
+  --warning: #f0c477;
+  --control-border: #686b78;
+  --border: #363943;
+  --focus: #9aaaff;
+  --radius: 10px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}

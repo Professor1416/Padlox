@@ -40,8 +40,47 @@ test('trusted popup/Settings and password-free overlay integrate with authorizat
    const f=await fixture();try{await f.page.goto(origin+'/settings/settings.html');await f.page.locator('#settings-auth-submit').waitFor();assert.equal(await f.page.locator('#settings-dashboard').isVisible(),false);assert.equal(await f.page.locator('#sites-list').textContent(),'');
     await f.page.locator('#settings-auth-password').fill('wrong');await f.page.locator('#settings-auth-submit').click();await f.page.getByText('Incorrect password.',{exact:true}).waitFor();assert.equal(await f.page.locator('#settings-dashboard').isVisible(),false);f.tick();
     await f.page.locator('#settings-auth-password').fill('test-pin-123');await f.page.locator('#settings-auth-submit').click();await f.page.locator('#settings-dashboard').waitFor({state:'visible'});assert.equal(await f.page.locator('#modal-backdrop').isVisible(),false);
+    if(process.env.PADLOX_SCREENSHOTS) await f.page.screenshot({path:'/tmp/padlox-settings.png',fullPage:true});
     await f.page.getByRole('button',{name:'Remove protection',exact:true}).click();await f.page.locator('#modal-password').fill('wrong');await f.page.locator('#modal-confirm').click();await f.page.getByText('Incorrect password.',{exact:true}).waitFor();assert(f.local.padlox_sites['example.com']);f.tick();
     await f.page.locator('#modal-password').fill('test-pin-123');await f.page.locator('#modal-confirm').click();await f.page.locator('#modal-backdrop').waitFor({state:'hidden'});assert.deepEqual(f.local.padlox_sites,{});assert.deepEqual(f.errors,[]);
+   }finally{await f.context.close();}
+  });
+  await t.test('minimal UI keeps password visibility, modal focus and expiry cleanup predictable',async()=>{
+   const f=await fixture();try{
+    await f.page.goto(origin+'/settings/settings.html');
+    await f.page.locator('#settings-auth-password').fill('test-pin-123');
+    await f.page.locator('[aria-controls="settings-auth-password"]').click();
+    assert.equal(await f.page.locator('#settings-auth-password').getAttribute('type'),'text');
+    await f.page.locator('#settings-auth-submit').click();
+    await f.page.locator('#settings-dashboard').waitFor({state:'visible'});
+    assert.equal(await f.page.locator('#settings-auth-password').getAttribute('type'),'password');
+    f.local.padlox_sites={['a'.repeat(63)+'.'+'b'.repeat(63)+'.example.com']:{addedAt:1}};
+    await f.page.setViewportSize({width:360,height:740});
+    await f.page.locator('#sites-search').fill('example');
+    await f.page.getByText(Object.keys(f.local.padlox_sites)[0],{exact:true}).waitFor();
+    assert.equal(await f.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await f.page.setViewportSize({width:1280,height:720});
+    const remove=f.page.getByRole('button',{name:'Remove protection',exact:true});
+    await remove.click(); await f.page.locator('#modal-password').waitFor();
+    assert.equal(await f.page.locator('.page').evaluate(e=>e.inert),true);
+    await f.page.locator('#modal-password').focus(); await f.page.keyboard.press('Shift+Tab');
+    assert.equal(await f.page.locator('#modal-confirm').evaluate(e=>e===document.activeElement),true);
+    await f.page.locator('[aria-controls="modal-password"]').click();
+    await f.page.keyboard.press('Escape');
+    assert.equal(await remove.evaluate(e=>e===document.activeElement),true);
+    assert.equal(await f.page.locator('.page').evaluate(e=>e.inert),false);
+    await remove.click();
+    assert.equal(await f.page.locator('#modal-password').getAttribute('type'),'password');
+    assert.equal(await f.page.locator('[aria-controls="modal-password"]').getAttribute('aria-pressed'),'false');
+    await f.page.keyboard.press('Escape');
+    await f.page.locator('#current-password').fill('visible secret');
+    await f.page.locator('[aria-controls="current-password"]').click();
+    f.session.padlox_settings_grants={};
+    await f.page.evaluate(()=>__listeners.forEach(listener=>listener({action:'REFRESH_STATUS'},{id:'padlox'})));
+    await f.page.locator('#settings-gate').waitFor({state:'visible'});
+    assert.equal(await f.page.locator('#current-password').inputValue(),'');
+    assert.equal(await f.page.locator('#current-password').getAttribute('type'),'password');
+    assert.deepEqual(f.errors,[]);
    }finally{await f.context.close();}
   });
   await t.test('authenticated reset deletes data and completes without DOM cleanup errors',async()=>{
@@ -68,9 +107,9 @@ test('trusted popup/Settings and password-free overlay integrate with authorizat
    }finally{await f.context.close();}
   });
   await t.test('popup owns password input; content overlay has no password/storage/crypto dependency',async()=>{
-   const f=await fixture();try{await f.page.goto(origin+'/popup/popup.html');await f.page.locator('#unlock-password').waitFor();await f.page.locator('#unlock-password').fill('test-pin-123');await f.page.locator('#unlock-submit').click();await f.page.getByText('This tab is unlocked',{exact:true}).waitFor();assert.equal(await f.page.locator('#unlock-password').inputValue(),'');
+   const f=await fixture();try{await f.page.goto(origin+'/popup/popup.html');await f.page.locator('#unlock-password').waitFor();if(process.env.PADLOX_SCREENSHOTS) await f.page.screenshot({path:'/tmp/padlox-popup.png'});await f.page.locator('#unlock-password').fill('test-pin-123');await f.page.locator('#unlock-submit').click();await f.page.getByText('This tab is unlocked',{exact:true}).waitFor();assert.equal(await f.page.locator('#unlock-password').inputValue(),'');
     const site=await f.context.newPage();await site.goto(origin+'/site');await site.addScriptTag({path:path.join(root,'content/lock.js')});await site.locator('#padlox-host').waitFor({state:'detached'});
-    await f.page.locator('#lock-now-btn').click();await f.page.getByText('This tab is locked',{exact:true}).waitFor();await site.evaluate(()=>__listeners.forEach(f=>f({action:'REFRESH_STATUS'},{id:'padlox'})));await site.locator('#padlox-host').waitFor();assert.equal(await site.locator('input').count(),0);assert.equal(await site.evaluate(()=>!!chrome.storage),false);
+    await f.page.locator('#lock-now-btn').click();await f.page.getByText('This tab is locked',{exact:true}).waitFor();await site.evaluate(()=>__listeners.forEach(f=>f({action:'REFRESH_STATUS'},{id:'padlox'})));await site.locator('#padlox-host').waitFor();if(process.env.PADLOX_SCREENSHOTS) await site.screenshot({path:'/tmp/padlox-lock.png'});assert.equal(await site.locator('input').count(),0);assert.equal(await site.evaluate(()=>!!chrome.storage),false);
     const source=fs.readFileSync(path.join(root,'content/lock.js'),'utf8');assert(!source.includes('crypto.subtle'));assert(!source.includes('chrome.storage'));assert.deepEqual(f.errors,[]);
    }finally{await f.context.close()}
   });

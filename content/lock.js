@@ -3,36 +3,42 @@
  if(window.__padloxInitialized)return;
  window.__padloxInitialized=true;
   const STYLES = `
-    .padlox-overlay {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(10, 11, 13, 0.97);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    .padlox-card {
-      width: 300px;
-      max-width: 88vw;
-      padding: 32px 24px 22px;
-      background: #17181c;
-      border: 1px solid #2a2b30;
-      border-radius: 14px;
-      text-align: center;
-      color: #f2f2f3;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
-    }
-    .padlox-icon { font-size: 26px; margin-bottom: 10px; }
-    .padlox-title { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; margin-bottom: 4px; }
-    .padlox-subtitle { font-size: 13px; color: #9a9ba3; margin-bottom: 20px; }
-    .padlox-error { min-height: 16px; font-size: 12px; color: #ff6b6b; margin-top: 10px; }
-    .padlox-footer { margin-top: 14px; font-size: 11px; color: #63646b; }
-  `;
+:root, :host {
+  --background: #0e0f12;
+  --surface: #17181c;
+  --surface-raised: #1c1d22;
+  --accent: #4a6cf7;
+  --action: #3d5be0;
+  --action-hover: #344ec4;
+  --text: #f2f2f3;
+  --muted: #b3b6c1;
+  --subtle: #9a9ba3;
+  --error: #ff6b6b;
+  --success: #93d9b0;
+  --warning: #f0c477;
+  --control-border: #686b78;
+  --border: #363943;
+  --focus: #9aaaff;
+  --radius: 10px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Runtime shadow styles are synchronized by npm run sync:styles. */
+* { box-sizing: border-box; }
+.padlox-overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; background: var(--background); display: grid; place-items: center; padding: 24px; font: 14px/1.6 var(--font); color: var(--text); }
+.padlox-card { width: 360px; max-width: 100%; padding: 32px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); text-align: center; }
+.padlox-icon { width: 48px; height: 48px; border: 1px solid var(--border); border-radius: 12px; display: grid; place-items: center; color: var(--focus); margin: 0 auto 24px; }
+.padlox-icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.padlox-title { font-size: 21px; font-weight: 600; letter-spacing: -.4px; margin: 0 0 12px; }
+.padlox-subtitle { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+.padlox-footer { color: var(--subtle); font-size: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
+@media (max-width: 400px) { .padlox-overlay { padding: 16px; } .padlox-card { padding: 24px; } }
+`;
 
 
  let host=null,revision=0,previousOverflow=null;
@@ -58,7 +64,7 @@
   host.style.cssText='all:initial;position:fixed;inset:0;z-index:2147483647';
   host.tabIndex=-1;
   const shadow=host.attachShadow({mode:'open'});
-  shadow.innerHTML=`<style>${STYLES}</style><div class="padlox-overlay" role="dialog" aria-modal="true" aria-label="Padlox privacy lock"><div class="padlox-card"><div class="padlox-icon">🔒</div><div class="padlox-title">This tab is locked</div><p class="padlox-subtitle">Open the Padlox toolbar icon to enter your password and unlock this tab.</p><div class="padlox-footer" role="status">Checking protection…</div></div></div>`;
+  shadow.innerHTML=`<style>${STYLES}</style><div class="padlox-overlay" role="dialog" aria-modal="true" aria-label="Padlox privacy lock"><div class="padlox-card"><div class="padlox-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></div><h2 class="padlox-title">This tab is locked</h2><p class="padlox-subtitle">Open the Padlox toolbar icon to enter your password and unlock this tab.</p><div class="padlox-footer" role="status">Checking protection…</div></div></div>`;
   (document.documentElement||document).appendChild(host);
   if(document.documentElement){previousOverflow=[document.documentElement.style.getPropertyValue('overflow'),document.documentElement.style.getPropertyPriority('overflow')];document.documentElement.style.setProperty('overflow','hidden','important');}
   for(const type of blockedEvents)window.addEventListener(type,blockEvent,{capture:true,passive:false});

@@ -19,6 +19,15 @@ load an unpacked extension. Run `npm run test:unit` for the browser-independent
 authorization, password, domain, and worker tests only. Test dependencies are not needed to install
 the extension.
 
+## UI styles
+
+Popup and Settings share `shared/tokens.css` and `shared/ui.css`. The lock
+screen uses an opaque background and embeds the same tokens in its Shadow DOM.
+After editing `shared/tokens.css` or `content/lock.css`, run `npm run sync:styles`
+and commit the generated `content/lock.js` together with its CSS sources.
+Browser regressions also cover password visibility, modal keyboard focus, and
+clearing password fields when Settings access expires.
+
 ## Security architecture
 
 Requires Chrome 106 or newer. Password entry and verification happen in trusted

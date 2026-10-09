@@ -1,7 +1,9 @@
+import {initializePasswords} from '../shared/ui.js';
 import {request} from '../shared/client.js';
 import {isSupportedUrl,hostnameFromUrl,normalizeDomain,buildOriginPatterns} from '../shared/utils.js';
 const el=id=>document.getElementById(id);
 let activeTab=null,currentDomain=null,currentDocumentId=null,permissionDomain=null;
+initializePasswords();
 async function render(){
  const state=await request('POPUP_STATE',{tabId:activeTab?.id||0});
  currentDocumentId=state.documentId;
@@ -9,6 +11,7 @@ async function render(){
  el('setup-screen').hidden=state.configured;el('main-screen').hidden=!state.configured;
  el('current-site-box').hidden=!currentDomain;el('unsupported-msg').hidden=!!currentDomain;
  el('current-site-domain').textContent=currentDomain||'';
+ el('current-site-status').dataset.state=state.needsPermission||state.needsRepair?'attention':state.unlocked?'unlocked':'locked';
  el('current-site-status').textContent=state.domain?(state.needsPermission?'Site access revoked — protection is unavailable':state.needsRepair?'Protection needs repair':state.unlocked?'This tab is unlocked':'This tab is locked'):'';
  el('protect-btn').hidden=!!state.domain&&!state.needsPermission&&!state.needsRepair;
  el('protect-btn').textContent=state.needsPermission?'Restore site access':state.needsRepair?'Retry protection':'Lock this site';

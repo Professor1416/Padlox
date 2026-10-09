@@ -8,22 +8,23 @@
 <body>
   <div class="page">
     <header class="page-header">
-      <span class="brand-icon">🔒</span>
-      <h1>Padlox Settings</h1>
+      <span class="brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span>
+      <div><h1>Padlox Settings</h1><p class="helper">Your sites. Your privacy.</p></div>
     </header>
 
     <section id="settings-gate" class="card">
-      <h2>Unlock Settings</h2>
+      <h2>Unlock Settings</h2><p class="helper">Enter your password to manage your protected websites. Access lasts five minutes.</p>
       <form id="settings-auth-form" class="stacked-form">
         <label for="settings-auth-password">Padlox password</label>
-        <input id="settings-auth-password" type="password" autocomplete="current-password" required />
+        <input id="settings-auth-password" aria-describedby="settings-auth-error" type="password" autocomplete="current-password" required />
         <div id="settings-auth-error" class="error-text" role="alert"></div>
         <button id="settings-auth-submit" type="submit" class="btn-primary">Unlock Settings</button>
       </form>
     </section>
     <div id="settings-dashboard" hidden>
     <section class="card">
-      <h2>Protected websites</h2>
+      <h2>Protected websites</h2><p class="helper">Manage where Padlox adds a privacy lock.</p>
+      <label for="sites-search">Search websites</label>
       <input type="text" id="sites-search" class="search-input" placeholder="Search protected sites..." />
       <ul id="sites-list" class="sites-list"></ul>
       <div id="sites-empty" class="empty-text" hidden>No protected websites yet.</div>
@@ -32,13 +33,16 @@
 
     <section class="card">
       <h2>Security</h2>
-      <div class="subhead">Change Padlox password</div>
+      <p class="helper">Changing your password locks all tabs and ends Settings access.</p>
       <form id="change-password-form" class="stacked-form">
-        <input type="password" id="current-password" placeholder="Current password" autocomplete="current-password" />
-        <input type="password" id="new-password" placeholder="New password" autocomplete="new-password" />
-        <input type="password" id="confirm-password" placeholder="Confirm new password" autocomplete="new-password" />
-        <div class="error-text" id="change-password-error"></div>
-        <div class="success-text" id="change-password-success"></div>
+        <label for="current-password">Current password</label>
+        <input aria-describedby="change-password-error" type="password" id="current-password" placeholder="Current password" autocomplete="current-password" />
+        <label for="new-password">New password</label>
+        <input aria-describedby="change-password-error" type="password" id="new-password" placeholder="New password" autocomplete="new-password" />
+        <label for="confirm-password">Confirm new password</label>
+        <input aria-describedby="change-password-error" type="password" id="confirm-password" placeholder="Confirm new password" autocomplete="new-password" />
+        <div class="error-text" id="change-password-error" role="alert"></div>
+        <div class="success-text" id="change-password-success" role="status"></div>
         <button type="submit" class="btn-primary">Update password</button>
       </form>
     </section>
@@ -62,11 +66,12 @@
 
   <!-- Confirmation modal, reused for "remove site" and "reset" -->
   <div id="modal-backdrop" class="modal-backdrop" hidden>
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-message">
       <div class="modal-title" id="modal-title">Confirm</div>
       <div class="modal-message" id="modal-message"></div>
-      <input type="password" id="modal-password" placeholder="Padlox password" autocomplete="current-password" />
-      <div class="error-text" id="modal-error"></div>
+      <label for="modal-password">Padlox password</label>
+      <input aria-describedby="modal-error" type="password" id="modal-password" placeholder="Padlox password" autocomplete="current-password" />
+      <div class="error-text" id="modal-error" role="alert"></div>
       <div class="modal-actions">
         <button id="modal-cancel" class="btn-secondary">Cancel</button>
         <button id="modal-confirm" class="btn-danger">Confirm</button>

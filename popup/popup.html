@@ -11,16 +11,17 @@
   <!-- First-time setup -->
   <section id="setup-screen" hidden>
     <div class="brand">
-      <span class="brand-icon">🔒</span>
+      <span class="brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span>
       <span class="brand-name">Padlox</span>
     </div>
-    <p class="tagline">Protect websites you stay signed into.</p>
+    <p class="tagline">A little more privacy.<br />Lock the websites you stay signed into.</p>
 
     <form id="setup-form" class="setup-form">
       <label class="field-label" for="setup-password">Create Padlox PIN / Password</label>
-      <input type="password" id="setup-password" placeholder="Password" autocomplete="new-password" />
-      <input type="password" id="setup-confirm" placeholder="Confirm password" autocomplete="new-password" />
-      <div class="error-text" id="setup-error"></div>
+      <input type="password" id="setup-password" aria-describedby="setup-error" placeholder="Password" autocomplete="new-password" />
+      <label for="setup-confirm">Confirm password</label>
+      <input type="password" id="setup-confirm" aria-describedby="setup-error" placeholder="Confirm password" autocomplete="new-password" />
+      <div class="error-text" id="setup-error" role="alert"></div>
       <button type="submit" id="setup-submit" class="btn-primary">Create Padlox</button>
     </form>
 
@@ -32,26 +33,26 @@
   <section id="main-screen" hidden>
     <header class="popup-header">
       <div class="brand">
-        <span class="brand-icon">🔒</span>
+        <span class="brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span>
         <span class="brand-name">Padlox</span>
       </div>
-      <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
+      <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z"/><circle cx="12" cy="12" r="3"/></svg></button>
     </header>
 
     <div id="current-site-box" class="current-site-box" hidden>
       <div class="section-label">Current site</div>
       <div class="current-site-domain" id="current-site-domain"></div>
-      <div class="current-site-status" id="current-site-status"></div>
+      <div class="current-site-status" id="current-site-status" role="status" aria-live="polite"></div>
 
       <button id="protect-btn" class="btn-primary" hidden>Lock this site</button>
       <form id="unlock-form" class="setup-form" hidden>
         <label class="field-label" for="unlock-password">Padlox password</label>
-        <input id="unlock-password" type="password" autocomplete="current-password" required />
+        <input id="unlock-password" aria-describedby="unlock-error" type="password" autocomplete="current-password" required />
         <div id="unlock-error" class="error-text" role="alert"></div>
         <button id="unlock-submit" type="submit" class="btn-primary">Unlock this tab</button>
       </form>
       <button id="lock-now-btn" class="btn-secondary" hidden>Lock now</button>
-      <div class="error-text" id="protect-error"></div>
+      <div class="error-text" id="protect-error" role="alert"></div>
     </div>
 
     <div id="unsupported-msg" class="unsupported-msg" hidden>
@@ -65,6 +66,7 @@
     </div>
   </section>
 
+  <p class="popup-footer">Stored on this device · No account needed</p>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

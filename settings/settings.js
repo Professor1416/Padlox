@@ -1,3 +1,4 @@
+import {initializePasswords, initializeDialog, clearPasswords} from '../shared/ui.js';
 import { request } from '../shared/client.js';
 import { validateNewPassword } from '../shared/crypto.js';
 import { displayName } from '../shared/utils.js';
@@ -8,6 +9,8 @@ const el = (id) => document.getElementById(id);
 let pendingConfirmAction = null; // async (password) => { ok: boolean, error?: string }
 
 async function init() {
+  initializePasswords();
+  initializeDialog(el('modal-backdrop'), document.querySelector('.page'), closeModal);
   wireEvents();
   chrome.runtime.onMessage.addListener((message, sender) => {
     const dashboard = el('settings-dashboard');
@@ -100,7 +103,7 @@ function wireEvents() {
 function openModal(title, message, onConfirm) {
   el('modal-title').textContent = title;
   el('modal-message').textContent = message;
-  el('modal-password').value = '';
+  clearPasswords(el('modal-backdrop'));
   el('modal-error').textContent = '';
   pendingConfirmAction = onConfirm;
   el('modal-backdrop').hidden = false;
@@ -109,7 +112,7 @@ function openModal(title, message, onConfirm) {
 
 function closeModal() {
   if (el('modal-backdrop')) el('modal-backdrop').hidden = true;
-  if (el('modal-password')) el('modal-password').value = '';
+  if (el('modal-backdrop')) clearPasswords(el('modal-backdrop'));
   pendingConfirmAction = null;
 }
 
@@ -149,7 +152,7 @@ function lockSettings() {
   closeModal();
   if (!el('sites-list')) return;
   el('sites-list').replaceChildren();
-  for (const input of document.querySelectorAll('input[type="password"]')) input.value = '';
+  clearPasswords();
   el('settings-dashboard').hidden = true;
   el('settings-gate').hidden = false;
 }
