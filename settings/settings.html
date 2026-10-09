@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Padlox Settings</title>
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <span class="brand-icon">🔒</span>
+      <h1>Padlox Settings</h1>
+    </header>
+
+    <section class="card">
+      <h2>Protected websites</h2>
+      <input type="text" id="sites-search" class="search-input" placeholder="Search protected sites..." />
+      <ul id="sites-list" class="sites-list"></ul>
+      <div id="sites-empty" class="empty-text" hidden>No protected websites yet.</div>
+      <div id="sites-no-match" class="empty-text" hidden>No sites match your search.</div>
+    </section>
+
+    <section class="card">
+      <h2>Security</h2>
+      <div class="subhead">Change Padlox password</div>
+      <form id="change-password-form" class="stacked-form">
+        <input type="password" id="current-password" placeholder="Current password" autocomplete="current-password" />
+        <input type="password" id="new-password" placeholder="New password" autocomplete="new-password" />
+        <input type="password" id="confirm-password" placeholder="Confirm new password" autocomplete="new-password" />
+        <div class="error-text" id="change-password-error"></div>
+        <div class="success-text" id="change-password-success"></div>
+        <button type="submit" class="btn-primary">Update password</button>
+      </form>
+    </section>
+
+    <section class="card danger-zone">
+      <h2>Danger zone</h2>
+      <p class="danger-text">
+        Resetting Padlox removes your Padlox password and protected website list.
+        It does not change your Instagram, Facebook, Google, or other website passwords.
+      </p>
+      <button id="reset-btn" class="btn-danger">Reset Padlox</button>
+    </section>
+
+    <p class="footnote">
+      Padlox v1.0.1 &middot; Chrome extensions don't run in Incognito windows
+      unless you allow it in <code>chrome://extensions</code>. Protected sites
+      opened in Incognito won't be locked until you enable that.
+    </p>
+  </div>
+
+  <!-- Confirmation modal, reused for "remove site" and "reset" -->
+  <div id="modal-backdrop" class="modal-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-title" id="modal-title">Confirm</div>
+      <div class="modal-message" id="modal-message"></div>
+      <input type="password" id="modal-password" placeholder="Padlox password" autocomplete="current-password" />
+      <div class="error-text" id="modal-error"></div>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="btn-secondary">Cancel</button>
+        <button id="modal-confirm" class="btn-danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="settings.js"></script>
+</body>
+</html>

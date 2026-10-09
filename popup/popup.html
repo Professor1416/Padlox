@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Padlox</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <!-- First-time setup -->
+  <section id="setup-screen" hidden>
+    <div class="brand">
+      <span class="brand-icon">🔒</span>
+      <span class="brand-name">Padlox</span>
+    </div>
+    <p class="tagline">Protect websites you stay signed into.</p>
+
+    <form id="setup-form" class="setup-form">
+      <label class="field-label" for="setup-password">Create Padlox PIN / Password</label>
+      <input type="password" id="setup-password" placeholder="Password" autocomplete="new-password" />
+      <input type="password" id="setup-confirm" placeholder="Confirm password" autocomplete="new-password" />
+      <div class="error-text" id="setup-error"></div>
+      <button type="submit" id="setup-submit" class="btn-primary">Create Padlox</button>
+    </form>
+
+    <p class="note">Padlox cannot recover this password if you forget it.</p>
+    <p class="note note-muted">Minimum 4 characters. A 6+ digit PIN or a stronger password is recommended.</p>
+  </section>
+
+  <!-- Main popup -->
+  <section id="main-screen" hidden>
+    <header class="popup-header">
+      <div class="brand">
+        <span class="brand-icon">🔒</span>
+        <span class="brand-name">Padlox</span>
+      </div>
+      <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
+    </header>
+
+    <div id="current-site-box" class="current-site-box" hidden>
+      <div class="section-label">Current site</div>
+      <div class="current-site-domain" id="current-site-domain"></div>
+      <div class="current-site-status" id="current-site-status"></div>
+
+      <button id="protect-btn" class="btn-primary" hidden>Lock this site</button>
+      <button id="lock-now-btn" class="btn-secondary" hidden>Lock now</button>
+      <div class="error-text" id="protect-error"></div>
+    </div>
+
+    <div id="unsupported-msg" class="unsupported-msg" hidden>
+      This page can't be protected by Padlox.
+    </div>
+
+    <div class="sites-section">
+      <div class="section-label">Protected sites</div>
+      <div id="sites-summary" class="sites-summary"></div>
+      <button id="manage-sites-btn" class="btn-secondary">Manage protected sites</button>
+    </div>
+  </section>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
