@@ -62,6 +62,7 @@ export async function createVerifier(password) {
     hash,
     iterations: PBKDF2_ITERATIONS,
     algo: HASH_ALGO,
+    version: 1,
     createdAt: Date.now()
   };
 }
@@ -69,9 +70,34 @@ export async function createVerifier(password) {
 /**
  * Verify a candidate password against a stored verifier record.
  */
+export function validateVerifier(config) {
+  const invalid = () => { throw new Error('Invalid Padlox password data.'); };
+  if (!config || typeof config !== 'object' || Array.isArray(config)) invalid();
+  if (config.version !== undefined && config.version !== 1) invalid();
+  if (config.algo !== HASH_ALGO || config.iterations !== PBKDF2_ITERATIONS) invalid();
+  for (const [field, length] of [['salt', SALT_LENGTH_BYTES], ['hash', KEY_LENGTH_BITS / 8]]) {
+    if (typeof config[field] !== 'string' || config[field].length !== 4 * Math.ceil(length / 3)) invalid();
+    let bytes;
+    try { bytes = fromBase64(config[field]); } catch { invalid(); }
+    if (bytes.length !== length || toBase64(bytes) !== config[field]) invalid();
+  }
+  return config;
+}
+
+export function validateNewPassword(password) {
+  if (typeof password !== 'string' || password.length > 1024 || !password.trim()) {
+    throw new Error('Use a six-digit or longer PIN, or a password with at least eight characters.');
+  }
+  const minimum = /^\d+$/.test(password) ? 6 : 8;
+  if (password.length < minimum) {
+    throw new Error('Use a six-digit or longer PIN, or a password with at least eight characters.');
+  }
+}
+
 export async function verifyPassword(password, config) {
-  if (!config || !config.salt || !config.hash) return false;
-  const saltBytes = fromBase64(config.salt);
-  const candidateHash = await deriveHash(password, saltBytes, config.iterations || PBKDF2_ITERATIONS);
+  if (config == null) return false;
+  validateVerifier(config);
+  if (typeof password !== 'string' || password.length > 1024) return false;
+  const candidateHash = await deriveHash(password, fromBase64(config.salt), config.iterations);
   return constantTimeEqual(candidateHash, config.hash);
 }

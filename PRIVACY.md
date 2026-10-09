@@ -10,7 +10,7 @@ All Padlox data is stored locally in your browser, using Chrome's
 
 - **Your Padlox password** is never stored in plain text. Padlox derives a
   salted PBKDF2 (SHA-256) hash from it and stores only the random salt and
-  the resulting hash — not the password itself. The hash is not plaintext, but weak PINs/passwords can be guessed offline
+  the resulting hash — not the password itself. Weak PINs/passwords can be guessed offline
   by someone who obtains the verifier.
 - **Your protected website list** (e.g. `instagram.com`) is stored locally
   so Padlox knows which sites to lock.
@@ -18,9 +18,10 @@ All Padlox data is stored locally in your browser, using Chrome's
   in session storage. New tabs and reloads require another unlock.
 - **Settings authorization** stores a page-bound authorization expiry in
   session storage and expires after five minutes.
-- **Failed-password attempts** and cooldown timestamps live in session storage
-  and are shared across password actions. These session records clear on browser
-  restart; restarting can therefore reset the cooldown.
+- **Failed-password attempts** and cooldown timestamps live in local storage
+  and are shared across password actions. They persist across browser restarts
+  and extension reloads until successful authentication or an authenticated reset.
+  No plaintext attempted passwords are stored.
 
 Only trusted extension contexts can access this storage. The service worker
 owns authorization. Websites do not receive the verifier or your password
@@ -52,6 +53,6 @@ install time.
 
 Padlox is a local-only tool with no company or server behind the data it
 handles. The authenticated **Reset Padlox** action removes Padlox's verifier,
-protected-site list, and session authorizations. Uninstalling the extension
+protected-site list, failed-attempt data, and session authorizations. Uninstalling the extension
 removes its extension storage. Padlox cannot guarantee secure erasure of browser
 backups or filesystem copies. Your website accounts are unaffected.

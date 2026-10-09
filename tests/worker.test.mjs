@@ -7,8 +7,10 @@ test('worker restricts both storage areas before serving requests; initializatio
   const sessionReady=new Promise(resolve=>{resolveSession=resolve});
   globalThis.chrome={
    runtime:{id:'padlox',getURL:p=>'chrome-extension://padlox/'+p,onMessage:{addListener:f=>listener=f},onInstalled:{addListener:()=>{}},onStartup:{addListener:()=>{}}},
-   storage:{local:{setAccessLevel:async x=>levels.push(['local',x.accessLevel]),get:async()=>({})},session:{setAccessLevel:async x=>{levels.push(['session',x.accessLevel]);await sessionReady;if(fail)throw Error('storage unavailable')},get:async()=>({})}},
-   tabs:{onRemoved:{addListener:()=>{}}}
+   storage:{local:{setAccessLevel:async x=>levels.push(['local',x.accessLevel]),get:async()=>({})},session:{setAccessLevel:async x=>{levels.push(['session',x.accessLevel]);await sessionReady;if(fail)throw Error('storage unavailable')},get:async()=>({}),set:async()=>{},remove:async()=>{}}},
+   tabs:{onRemoved:{addListener:()=>{}}},
+   scripting:{getRegisteredContentScripts:async()=>[]},
+   permissions:{onRemoved:{addListener:()=>{}},onAdded:{addListener:()=>{}}}
   };
   try{
    await import(`../background/service-worker.js?test=${fail}`);

@@ -23,7 +23,7 @@ test('trusted popup/Settings and password-free overlay integrate with authorizat
   async function fixture(){
    const local={padlox_config:await createVerifier('test-pin-123'),padlox_sites:{'example.com':{addedAt:1}}};const session={};let time=Date.now();
    const area=data=>({get:async keys=>Object.fromEntries((Array.isArray(keys)?keys:[keys]).map(k=>[k,structuredClone(data[k])])),set:async v=>Object.assign(data,structuredClone(v)),remove:async keys=>{for(const k of Array.isArray(keys)?keys:[keys])delete data[k]}});
-   const api={runtime:{id:'padlox',getURL:p=>'chrome-extension://padlox/'+p},storage:{local:area(local),session:area(session)},tabs:{get:async id=>({id,url:'https://example.com/'})},permissions:{contains:async()=>true,remove:async()=>true},scripting:{executeScript:async()=>[{documentId:'site-a'}],getRegisteredContentScripts:async()=>[],registerContentScripts:async()=>{},unregisterContentScripts:async()=>{}}};
+   const api={runtime:{id:'padlox',getURL:p=>'chrome-extension://padlox/'+p},storage:{local:area(local),session:area(session)},tabs:{get:async id=>({id,url:'https://example.com/'})},permissions:{contains:async()=>true,remove:async()=>true},scripting:{executeScript:async()=>[{documentId:'site-a'}],getRegisteredContentScripts:async()=>[{id:'padlox-example.com',matches:['*://example.com/*','*://*.example.com/*'],js:['content/lock.js'],runAt:'document_start',world:'ISOLATED',persistAcrossSessions:true}],registerContentScripts:async()=>{},unregisterContentScripts:async()=>{}}};
    const handle=createAuthorization(api,()=>time);const context=await browser.newContext();const errors=[];
    context.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));
    await context.exposeBinding('__dispatch',async({page},message)=>{
@@ -31,9 +31,10 @@ test('trusted popup/Settings and password-free overlay integrate with authorizat
     const sender=pathname.startsWith('/settings/')?{id:'padlox',url:api.runtime.getURL('settings/settings.html'),tab:{id:3},frameId:0,documentId:'settings-a'}:pathname.startsWith('/popup/')?{id:'padlox',url:api.runtime.getURL('popup/popup.html')}:{id:'padlox',url:'https://example.com/',tab:{id:1},frameId:0,documentId:'site-a'};
     return handle(message,sender);
    });
-   await context.addInitScript(()=>{globalThis.__listeners=[];globalThis.chrome={runtime:{id:'padlox',getURL:p=>'chrome-extension://padlox/'+p,sendMessage:m=>__dispatch(m),onMessage:{addListener:f=>__listeners.push(f)}},tabs:{query:async()=>[{id:1,url:'https://example.com/'}],create:async()=>{}},permissions:{request:async()=>true}}});
+   await context.exposeFunction('__grantAccess',()=>{api.permissions.contains=async()=>true;return true;});
+   await context.addInitScript(()=>{globalThis.__listeners=[];globalThis.chrome={runtime:{id:'padlox',getURL:p=>'chrome-extension://padlox/'+p,sendMessage:m=>__dispatch(m),onMessage:{addListener:f=>__listeners.push(f)}},tabs:{query:async()=>[{id:1,url:'https://example.com/'}],create:async()=>{}},permissions:{request:async()=>__grantAccess()}}});
    const page=await context.newPage();
-   return {local,session,context,page,errors,tick:()=>time+=16000};
+   return {local,session,api,context,page,errors,tick:()=>time+=16000};
   }
   await t.test('Settings hides sensitive list until authenticated; wrong password cannot authorize',async()=>{
    const f=await fixture();try{await f.page.goto(origin+'/settings/settings.html');await f.page.locator('#settings-auth-submit').waitFor();assert.equal(await f.page.locator('#settings-dashboard').isVisible(),false);assert.equal(await f.page.locator('#sites-list').textContent(),'');
@@ -45,6 +46,26 @@ test('trusted popup/Settings and password-free overlay integrate with authorizat
   });
   await t.test('authenticated reset deletes data and completes without DOM cleanup errors',async()=>{
    const f=await fixture();try{await f.page.goto(origin+'/settings/settings.html');await f.page.locator('#settings-auth-password').fill('test-pin-123');await f.page.locator('#settings-auth-submit').click();await f.page.locator('#settings-dashboard').waitFor({state:'visible'});await f.page.locator('#reset-btn').click();await f.page.locator('#modal-password').fill('test-pin-123');await f.page.locator('#modal-confirm').click();await f.page.getByRole('heading',{name:'Padlox has been reset'}).waitFor();await f.page.evaluate(()=>__listeners.forEach(listener=>listener({action:'REFRESH_STATUS'},{id:'padlox'})));assert.equal(f.local.padlox_config,undefined);assert.deepEqual(f.errors,[])}finally{await f.context.close()}
+  });
+  await t.test('revoked access offers restoration and requires a fresh unlock afterward',async()=>{
+   const f=await fixture();
+   try{
+    await f.page.goto(origin+'/popup/popup.html');
+    await f.page.locator('#unlock-password').fill('test-pin-123');
+    await f.page.locator('#unlock-submit').click();
+    await f.page.getByText('This tab is unlocked',{exact:true}).waitFor();
+    f.api.permissions.contains=async()=>false;
+    await f.page.reload();
+    await f.page.getByRole('button',{name:'Restore site access',exact:true}).waitFor();
+    assert.equal(await f.page.locator('#unlock-form').isVisible(),false);
+    await f.page.getByRole('button',{name:'Restore site access',exact:true}).click();
+    await f.page.getByText('This tab is locked',{exact:true}).waitFor();
+    assert.equal(f.session.padlox_tab_unlocks,undefined);
+    await f.page.locator('#unlock-password').fill('test-pin-123');
+    await f.page.locator('#unlock-submit').click();
+    await f.page.getByText('This tab is unlocked',{exact:true}).waitFor();
+    assert.deepEqual(f.errors,[]);
+   }finally{await f.context.close();}
   });
   await t.test('popup owns password input; content overlay has no password/storage/crypto dependency',async()=>{
    const f=await fixture();try{await f.page.goto(origin+'/popup/popup.html');await f.page.locator('#unlock-password').waitFor();await f.page.locator('#unlock-password').fill('test-pin-123');await f.page.locator('#unlock-submit').click();await f.page.getByText('This tab is unlocked',{exact:true}).waitFor();assert.equal(await f.page.locator('#unlock-password').inputValue(),'');

@@ -1,4 +1,5 @@
 import { request } from '../shared/client.js';
+import { validateNewPassword } from '../shared/crypto.js';
 import { displayName } from '../shared/utils.js';
 
 let expiryTimer = null;
@@ -186,10 +187,8 @@ async function onChangePassword(e) {
   errorEl.textContent = '';
   successEl.textContent = '';
 
-  if (next.length < 4) {
-    errorEl.textContent = 'New password must be at least 4 characters.';
-    return;
-  }
+  try { validateNewPassword(next); }
+  catch (error) { errorEl.textContent = error.message; return; }
   if (next !== confirm) {
     errorEl.textContent = 'New passwords do not match.';
     return;

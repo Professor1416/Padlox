@@ -11,7 +11,7 @@ export function isSupportedUrl(urlString) {
   try {
     const url = new URL(urlString);
     if (BLOCKED_SCHEMES.has(url.protocol)) return false;
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    return (url.protocol === 'http:' || url.protocol === 'https:') && !!normalizeDomain(url.hostname);
   } catch {
     return false;
   }
@@ -26,9 +26,21 @@ export function hostnameFromUrl(urlString) {
 }
 
 export function normalizeDomain(hostname) {
-  let h = (hostname || '').toLowerCase().trim();
+  if (typeof hostname !== 'string') return '';
+  let value = hostname.trim().toLowerCase();
+  if (value.endsWith('.')) value = value.slice(0, -1);
+  // Accept hostnames, never URLs, credentials, ports or match-pattern syntax.
+  if (!value || !/^[\p{L}\p{N}.-]+$/u.test(value)) return '';
+  let h;
+  try { h = new URL('http://' + value).hostname.toLowerCase(); } catch { return ''; }
   if (h.startsWith('www.')) h = h.slice(4);
+  if (h.length > 253 || h.endsWith('.')) return '';
+  if (h.split('.').some(label => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))) return '';
   return h;
+}
+
+function isIPv4(hostname) {
+  return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname);
 }
 
 /** Does `hostname` belong to `protectedDomain` (exact match or true subdomain)? */
@@ -36,12 +48,12 @@ export function domainMatches(protectedDomain, hostname) {
   const h = normalizeDomain(hostname);
   const p = normalizeDomain(protectedDomain);
   if (!h || !p) return false;
-  return h === p || h.endsWith('.' + p);
+  return h === p || (!isIPv4(p) && p.includes('.') && h.endsWith('.' + p));
 }
 
 /** Find the protected-site key (if any) that covers this hostname. */
 export function findProtectedDomain(hostname, sites) {
-  for (const domain of Object.keys(sites || {})) {
+  for (const domain of Object.keys(sites || {}).sort((a, b) => normalizeDomain(b).length - normalizeDomain(a).length)) {
     if (domainMatches(domain, hostname)) return domain;
   }
   return null;
@@ -50,7 +62,8 @@ export function findProtectedDomain(hostname, sites) {
 /** Build minimal, precise match patterns for requesting host permission. */
 export function buildOriginPatterns(domain) {
   const d = normalizeDomain(domain);
-  return [`*://${d}/*`, `*://*.${d}/*`];
+  if (!d) throw new Error('Invalid domain.');
+  return (isIPv4(d) || !d.includes('.')) ? [`*://${d}/*`] : [`*://${d}/*`, `*://*.${d}/*`];
 }
 
 export function displayName(domain) {
