@@ -201,7 +201,10 @@ See `PRIVACY.md` for details on what Padlox stores and what it never does.
 See [the P2 audit](docs/P2-AUDIT.md) for verified behavior and outstanding
 checks, and [the store checklist](docs/CHROME-WEB-STORE.md) for listing drafts,
 permission justifications, privacy disclosures, and manual release gates.
-These documents do not certify store approval or legal compliance.
+See [the P3 validation record](docs/P3-VALIDATION.md) and
+[native Chrome worksheet](docs/NATIVE-CHROME-VALIDATION.md) for package identity
+and outstanding real-browser checks. These documents do not certify store
+approval or legal compliance.
 
 With Node.js 22+ and Python 3.9+ available, run:
 

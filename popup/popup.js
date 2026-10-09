@@ -23,7 +23,8 @@ async function render(){
 }
 async function perform(button,errorId,operation){
  button.disabled=true;el(errorId).textContent='';
- try{await operation();await render()}catch(error){el(errorId).textContent=error.message}finally{button.disabled=false;}
+ let disabledAfterRender=false;
+ try{await operation();await render();disabledAfterRender=button.id==='lock-now-btn'&&button.disabled;}catch(error){el(errorId).textContent=error.message}finally{button.disabled=disabledAfterRender;}
 }
 function settings(){chrome.tabs.create({url:chrome.runtime.getURL('settings/settings.html')});}
 el('settings-btn').addEventListener('click',settings);el('manage-sites-btn').addEventListener('click',settings);

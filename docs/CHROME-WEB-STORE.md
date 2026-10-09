@@ -65,8 +65,9 @@ availability or policy certifications.
 
 Privacy policy candidate URL:
 [PRIVACY.md on main](https://github.com/Professor1416/Padlox/blob/main/PRIVACY.md).
-Verify it is publicly accessible without authentication and accepted in the
-current dashboard. A dedicated public policy page can be used later; no new
+Public accessibility without login was verified on 9 October 2026 (HTTP 200,
+policy content and logged-out markup). Acceptance in the current dashboard
+remains pending. A dedicated public policy page can be used later; no new
 hosting or tracking service is required by this repository change.
 
 ## Permission justifications draft
@@ -132,7 +133,7 @@ claim certification has been completed in this file.
 | P1 verifier, PIN policy, persistent cooldown, domain and permission recovery | Automated unit/fixture tests | Automated coverage passes; restart/native prompts pending |
 | Reset/privacy deletion behavior | Controller reset regression plus real UI fixture | Automated coverage; native grants/storage inspection pending |
 | Remote code/dependencies and permissions | Local source/manifest inspection, npm audit | No runtime remote loader or unnecessary new permission found; policy wording pending |
-| Privacy accuracy and discoverability | Revised policy, README and Settings link | Repository preparation done; publisher/contact and public URL verification pending |
+| Privacy accuracy and discoverability | Revised policy, README and Settings link | Repository preparation done; public URL verified; publisher/contact and store acceptance pending |
 | Current store/DPDP requirements | Official URLs identified | BLOCKED: proxy 403; no compliance conclusion |
 | Store listing/fields/assets/version | Drafts above | PENDING publisher/console and final screenshots |
 | Package reproducibility/runtime closure | Automated archive tests and checksum | Review package only; release validation is separate |
@@ -173,3 +174,10 @@ whose policies allow developer extensions. Do not bypass managed policies.
 If any security regression is reproducible, raise it to P0/P1 and fix/test it
 before release. Unexecuted cases stay pending; passing mock tests is not a
 substitute. This document is a gate record, not a declaration that they passed.
+
+## P3 follow-up
+
+See [the P3 validation record](P3-VALIDATION.md) for the native load probe,
+current-source access results, popup regression fix, and updated package
+checksum. Local Chrome is available to the user; use [the native worksheet](NATIVE-CHROME-VALIDATION.md)
+to record the cases that remain unrun. P3 is on HOLD, not release-cleared.

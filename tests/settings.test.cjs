@@ -106,6 +106,25 @@ test('trusted popup/Settings and password-free overlay integrate with authorizat
     assert.deepEqual(f.errors,[]);
    }finally{await f.context.close();}
   });
+  await t.test('Lock now remains disabled after success and remains retryable after an API failure',async()=>{
+   const f=await fixture();try{
+    await f.page.goto(origin+'/popup/popup.html');
+    await f.page.locator('#unlock-password').fill('test-pin-123');
+    await f.page.locator('#unlock-submit').click();
+    await f.page.getByText('This tab is unlocked',{exact:true}).waitFor();
+    const set=f.api.storage.session.set;
+    f.api.storage.session.set=async()=>{throw Error('storage write failed')};
+    await f.page.locator('#lock-now-btn').click();
+    await f.page.getByText('Could not complete the action. Please try again.',{exact:true}).waitFor();
+    assert.equal(await f.page.locator('#lock-now-btn').isDisabled(),false);
+    f.api.storage.session.set=set;
+    await f.page.locator('#lock-now-btn').click();
+    await f.page.getByText('This tab is locked',{exact:true}).waitFor();
+    assert.equal(await f.page.locator('#lock-now-btn').isDisabled(),true);
+    assert.equal(await f.page.locator('#lock-now-btn').textContent(),'Already locked');
+    assert.deepEqual(f.errors,[]);
+   }finally{await f.context.close();}
+  });
   await t.test('popup owns password input; content overlay has no password/storage/crypto dependency',async()=>{
    const f=await fixture();try{await f.page.goto(origin+'/popup/popup.html');await f.page.locator('#unlock-password').waitFor();if(process.env.PADLOX_SCREENSHOTS) await f.page.screenshot({path:'/tmp/padlox-popup.png'});await f.page.locator('#unlock-password').fill('test-pin-123');await f.page.locator('#unlock-submit').click();await f.page.getByText('This tab is unlocked',{exact:true}).waitFor();assert.equal(await f.page.locator('#unlock-password').inputValue(),'');
     const site=await f.context.newPage();await site.goto(origin+'/site');await site.addScriptTag({path:path.join(root,'content/lock.js')});await site.locator('#padlox-host').waitFor({state:'detached'});
